@@ -1,0 +1,96 @@
+---
+title: "Regresi PDRB"
+output: html_document
+date: "2025-02-17"
+---
+# Import Data
+```{r}
+pdrb_data <- read.delim("clipboard")
+View(pdrb_data)
+str(pdrb_data)
+```
+# Analisis Regresi
+```{r}
+# Model Regresi Linear
+model <- lm(PDRB_Ribu_Rp ~ Konsumsi_Rumah_Tangga_Ribu_Rp + Presentase_Tenaga_Kerja_Formal, data = pdrb_data)
+
+# Ringkasan hasil regresi
+summary(model)
+```
+```{r}
+# Uji Normalitas
+shapiro.test(residuals(model))
+```
+
+```{r}
+# Uji Homoskedastisitas
+library(lmtest)
+bptest(model)
+```
+
+```{r}
+# Uji Autokorelasi
+dwtest(model)
+```
+
+```{r}
+# Cek Multikolinearitas
+library(car)
+vif(model)
+```
+```{r}
+library(glmnet)
+
+# Menyiapkan data dalam bentuk matriks
+X <- model.matrix(PDRB_Ribu_Rp ~ Konsumsi_Rumah_Tangga_Ribu_Rp +  Presentase_Tenaga_Kerja_Formal, data = pdrb_data)[, -1]
+Y <- pdrb_data$PDRB_Ribu_Rp
+```
+
+```{r}
+# Ridge regression (alpha = 0)
+model_ridge <- cv.glmnet(X, Y, alpha = 0)
+plot(model_ridge)
+coef(model_ridge, s = "lambda.min")
+```
+
+```{r}
+# LASSO regression (alpha = 1)
+model_lasso <- cv.glmnet(X, Y, alpha = 1)
+plot(model_lasso)
+coef(model_lasso, s = "lambda.min")
+```
+# Analisis Forecasting
+```{r}
+# Filter Data (Misal dipilih provinsi = Aceh)
+data_forecast <- subset(pdrb_data, Provinsi == "Jawa Tengah")
+
+# Ubah menjadi Time Series (mulai dari tahun 2016)
+data_ts <- ts(data_forecast$PDRB_Ribu_Rp, start = 2016, frequency = 1)
+
+# Cek Time Series
+data_ts
+plot(data_ts, main = "PDRB Jateng", ylab = "PDRB (Ribu Rp)")
+```
+
+```{r}
+library(tseries)
+adf.test(data_ts)
+```
+```{r}
+library(forecast)
+library(tseries)
+# Forecast menggunakan Metode 2 Parameter Holt
+Holt<-holt(data_ts,h=1)
+Holt
+```
+
+```{r}
+autoplot(Holt)
+accuracy(Holt)
+```
+
+
+
+
+
+
